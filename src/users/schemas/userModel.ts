@@ -4,9 +4,6 @@ import {Types} from "mongoose";
 @Schema()
 export class UserModel {
 
-    @Prop({type: Types.ObjectId, auto: true})
-    _id: Types.ObjectId
-
     @Prop({})
     name: string
 
