@@ -1,27 +1,45 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { UserModel } from './schemas/userModel.js';
 import { Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { CreateUserDto } from './dtos/create-user.dto.js';
+import { User, UserDocument } from './schemas/userSchema.js';
+import { RegisterDto } from './dtos/register.dto.js';
 
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(UserModel.name) private readonly userModel: Model<UserModel>,
-  ) {}
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+  ) {
+  }
 
-  async createUser(userData: CreateUserDto) {
+  async create(email: string, password: string): Promise<UserDocument> {
 
-    const salt = bcrypt.genSaltSync(10);
-    const hash = bcrypt.hashSync(userData.password, salt);
 
-    const newUser = new this.userModel({...userData, hash});
+    const existing = await this.userModel.findOne({ email });
 
-    await newUser.save();
+    if ( existing ) {
+      // Fail with a clear message instead of letting Mongo's unique index
+      // throw a raw duplicate-key error
+      throw new ConflictException('Username is already taken');
+    }
 
-    return newUser;
+    const passwordHash = await bcrypt.hash(password, 10);
 
+    const user = new this.userModel({ email, passwordHash });
+
+    return user.save();
+  }
+
+  findByEmail(email: string) {
+    return this.userModel.findOne({ email }).exec();
+  }
+
+  findById(id: string) {
+    return this.userModel.findById(id).exec();
+  }
+
+  setRefreshTokenHash(userId: string, refreshTokenHash: string | null) {
+    return this.userModel.findByIdAndUpdate(userId, { refreshTokenHash }).exec();
   }
 }

@@ -5,6 +5,7 @@ import { AppService } from './app.service.js';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -17,9 +18,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     MongooseModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         uri: (() => {
-          const uri = configService.getOrThrow('MONGODB_URI'); // TEMP: log to verify which DB we're actually hitting
-          console.log('Mongo URI in use:', uri);
-          return uri;
+          return configService.getOrThrow('MONGODB_URI');
         })(),
       }),
 
@@ -33,6 +32,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     }),
 
     UsersModule,
+
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
