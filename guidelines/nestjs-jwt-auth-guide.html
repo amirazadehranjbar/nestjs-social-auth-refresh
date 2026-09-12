@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JWT Authentication in NestJS — Passport, Refresh Tokens, bcrypt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+<style>
+  :root{
+    --bg:#0c0f16;
+    --surface:#131824;
+    --surface-2:#1a2131;
+    --border:#262e42;
+    --text:#e7eaf2;
+    --text-muted:#8b93a7;
+    --accent:#ff4d6d;
+    --accent-soft:rgba(255,77,109,.13);
+    --ok:#4ade80;
+    --sidebar-w:250px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    line-height:1.6;
+  }
+  h1,h2,h3,.brand,nav a{font-family:'Space Grotesk',system-ui,sans-serif;}
+  code,pre,.mono,.badge,.filename{font-family:'JetBrains Mono',monospace;}
+
+  /* ---------- Sidebar ---------- */
+  #toc-toggle{display:none;}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);
+    background:var(--surface);border-right:1px solid var(--border);
+    padding:28px 20px;overflow-y:auto;
+  }
+  .brand{font-size:1.05rem;font-weight:700;color:var(--text);margin:0 0 4px;}
+  .brand span{color:var(--accent);}
+  .brand-sub{font-size:.8rem;color:var(--text-muted);margin:0 0 28px;}
+  .sidebar nav{display:flex;flex-direction:column;gap:2px;}
+  .sidebar nav a{
+    color:var(--text-muted);text-decoration:none;font-size:.88rem;
+    padding:7px 10px;border-radius:6px;font-weight:500;
+  }
+  .sidebar nav a:hover{color:var(--text);background:var(--surface-2);}
+  .sidebar nav .stack-label{
+    color:var(--text-muted);font-size:.72rem;margin:22px 0 8px 10px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .stack-pills{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px;}
+  .pill{
+    font-size:.7rem;padding:3px 8px;border-radius:5px;
+    background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);
+  }
+
+  /* ---------- Main content ---------- */
+  main{margin-left:var(--sidebar-w);padding:56px 64px 100px;max-width:840px;}
+  .hero-kicker{color:var(--accent);font-size:.85rem;font-weight:600;margin:0 0 10px;}
+  h1{font-size:2.3rem;line-height:1.2;margin:0 0 14px;}
+  .hero-desc{color:var(--text-muted);font-size:1.05rem;max-width:62ch;margin:0 0 28px;}
+  .source-note{
+    font-size:.85rem;color:var(--text-muted);border-left:2px solid var(--border);
+    padding:10px 16px;margin-bottom:44px;
+  }
+  .source-note a{color:var(--text);}
+
+  section{margin-bottom:58px;scroll-margin-top:30px;}
+  h2{font-size:1.4rem;border-bottom:1px solid var(--border);padding-bottom:12px;margin:0 0 20px;}
+  h3{font-size:1.05rem;margin:28px 0 10px;color:var(--text);}
+  p{color:#c7cbdb;}
+  ul,ol{color:#c7cbdb;padding-left:22px;}
+  li{margin-bottom:6px;}
+  strong{color:var(--text);}
+
+  .filename{
+    display:inline-block;font-size:.78rem;color:var(--text-muted);
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:3px 9px;border-radius:5px 5px 0 0;border-bottom:none;
+  }
+  pre{
+    margin:0 0 20px;background:#0d1117 !important;border:1px solid var(--border);
+    border-radius:0 8px 8px 8px;padding:16px 18px;overflow-x:auto;font-size:.83rem;
+  }
+  .filename + pre{border-radius:0 8px 8px 8px;}
+  p code, li code{
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:1px 6px;border-radius:4px;font-size:.85em;color:#ffb3c1;
+  }
+
+  .steps{counter-reset:step;list-style:none;padding-left:0;}
+  .steps > li{
+    counter-increment:step;position:relative;padding-left:40px;margin-bottom:26px;
+  }
+  .steps > li::before{
+    content:counter(step);position:absolute;left:0;top:0;
+    width:26px;height:26px;border-radius:50%;background:var(--accent-soft);
+    color:var(--accent);font-weight:600;font-size:.8rem;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .steps h3{margin:0 0 8px;}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0 8px;font-size:.9rem;}
+  th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top;}
+  th{color:var(--text-muted);font-weight:600;font-size:.78rem;}
+  td.bad{color:#ff8fa3;}
+  td.good{color:var(--ok);}
+
+  .tree{
+    background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:18px 22px;font-size:.83rem;color:#c7cbdb;white-space:pre;overflow-x:auto;
+  }
+  .tree b{color:var(--text);}
+
+  .flow-wrap{
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:20px;overflow-x:auto;
+  }
+  .flow-wrap svg{display:block;min-width:760px;}
+
+  @media (max-width:900px){
+    .sidebar{transform:translateX(-100%);transition:transform .2s ease;z-index:20;}
+    #toc-toggle:checked ~ .sidebar{transform:translateX(0);}
+    main{margin-left:0;padding:24px 20px 80px;}
+    label.menu-btn{
+      display:flex;align-items:center;gap:8px;position:fixed;top:16px;left:16px;z-index:21;
+      background:var(--surface);border:1px solid var(--border);color:var(--text);
+      padding:8px 14px;border-radius:8px;font-size:.82rem;cursor:pointer;
+    }
+  }
+  @media (min-width:901px){ label.menu-btn{display:none;} }
+</style>
+</head>
+<body>
+
+<input type="checkbox" id="toc-toggle">
+<label class="menu-btn" for="toc-toggle">☰ Contents</label>
+
+<aside class="sidebar">
+  <p class="brand">nest<span>auth</span>.md</p>
+  <p class="brand-sub">JWT + refresh tokens, done properly</p>
+  <nav>
+    <a href="#overview">Overview</a>
+    <a href="#flow">Request flow</a>
+    <a href="#structure">Project structure</a>
+    <a href="#setup">Setup, step by step</a>
+    <a href="#testing">Testing the endpoints</a>
+    <a href="#comparison">vs. the original article</a>
+  </nav>
+  <p class="stack-label">stack</p>
+  <div class="stack-pills">
+    <span class="pill">NestJS</span>
+    <span class="pill">Passport</span>
+    <span class="pill">JWT</span>
+    <span class="pill">bcrypt</span>
+    <span class="pill">Mongoose</span>
+  </div>
+</aside>
+
+<main>
+  <p class="hero-kicker">Auth pattern</p>
+  <h1>JWT Authentication in NestJS, with Passport and Refresh Tokens</h1>
+  <p class="hero-desc">
+    A complete, working version of the classic Passport-JWT setup — hashed passwords,
+    short-lived access tokens, rotating refresh tokens, and a working register endpoint.
+    Same simple shape as a typical tutorial, minus the parts that don't actually run.
+  </p>
+
+  <div class="source-note">
+    Based on <a href="https://dev.to/vishnucprasad/passport-jwt-authentication-in-nestjs-4nn6" target="_blank">"Passport JWT Authentication in NestJS"</a>
+    by Vishnu C Prasad. That article is a good intro to the shape of the pattern, but as written it won't
+    run: the register endpoint calls a service method that's never defined, passwords are compared as
+    plain text, the JWT secret is a hardcoded string, and there's no refresh flow or logout. This version
+    fixes those and adds the pieces a real app needs.
+  </div>
+
+  <section id="overview">
+    <h2>What's different here</h2>
+    <ul>
+      <li><strong>Passwords are hashed with bcrypt</strong> — never compared or stored as plain text.</li>
+      <li><strong>Two tokens, not one</strong> — a short-lived access token (15 min) and a longer-lived refresh token (7 days), so a stolen access token expires fast.</li>
+      <li><strong>Refresh tokens rotate and can be revoked</strong> — only a bcrypt hash of the current refresh token is stored, so logging out actually invalidates the session.</li>
+      <li><strong>Input is validated</strong> with DTOs and <code>class-validator</code>, instead of trusting raw <code>req.body</code>.</li>
+      <li><strong>Secrets live in <code>.env</code></strong>, loaded through <code>@nestjs/config</code>, not hardcoded in source.</li>
+      <li><strong>The register endpoint actually works</strong> — it calls a method that exists.</li>
+    </ul>
+  </section>
+
+  <section id="flow">
+    <h2>Request flow</h2>
+    <div class="flow-wrap">
+<svg viewBox="0 0 860 620" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b93a7"/>
+    </marker>
+  </defs>
+  <style>
+    .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;fill:#c7cbdb;}
+    .row-lbl{font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:600;fill:#ff4d6d;}
+    .box{fill:#1a2131;stroke:#262e42;stroke-width:1;}
+    .box-accent{fill:#26182a;stroke:#ff4d6d;stroke-width:1;}
+    .cap{font-family:'JetBrains Mono',monospace;font-size:9.5px;fill:#8b93a7;}
+    .arr{stroke:#8b93a7;stroke-width:1.3;fill:none;marker-end:url(#arrow);}
+  </style>
+
+  <!-- Row 1: Register -->
+  <text x="0" y="24" class="row-lbl">1. Register</text>
+  <rect x="0" y="38" width="140" height="54" rx="8" class="box"/>
+  <text x="70" y="60" text-anchor="middle" class="lbl">Client</text>
+  <text x="70" y="76" text-anchor="middle" class="cap">POST /auth/register</text>
+  <line x1="140" y1="65" x2="212" y2="65" class="arr"/>
+  <rect x="215" y="38" width="180" height="54" rx="8" class="box"/>
+  <text x="305" y="60" text-anchor="middle" class="lbl">AuthController</text>
+  <text x="305" y="76" text-anchor="middle" class="cap">validates DTO</text>
+  <line x1="395" y1="65" x2="467" y2="65" class="arr"/>
+  <rect x="470" y="38" width="200" height="54" rx="8" class="box-accent"/>
+  <text x="570" y="60" text-anchor="middle" class="lbl">bcrypt.hash(password)</text>
+  <text x="570" y="76" text-anchor="middle" class="cap">UserService.create()</text>
+  <line x1="670" y1="65" x2="742" y2="65" class="arr"/>
+  <rect x="745" y="38" width="110" height="54" rx="8" class="box"/>
+  <text x="800" y="60" text-anchor="middle" class="lbl">MongoDB</text>
+  <text x="800" y="76" text-anchor="middle" class="cap">users</text>
+
+  <!-- Row 2: Login -->
+  <text x="0" y="150" class="row-lbl">2. Login</text>
+  <rect x="0" y="164" width="140" height="54" rx="8" class="box"/>
+  <text x="70" y="186" text-anchor="middle" class="lbl">Client</text>
+  <text x="70" y="202" text-anchor="middle" class="cap">POST /auth/login</text>
+  <line x1="140" y1="191" x2="212" y2="191" class="arr"/>
+  <rect x="215" y="164" width="200" height="54" rx="8" class="box"/>
+  <text x="315" y="186" text-anchor="middle" class="lbl">validateUser()</text>
+  <text x="315" y="202" text-anchor="middle" class="cap">bcrypt.compare()</text>
+  <line x1="415" y1="191" x2="487" y2="191" class="arr"/>
+  <rect x="490" y="164" width="180" height="54" rx="8" class="box-accent"/>
+  <text x="580" y="186" text-anchor="middle" class="lbl">issueTokens()</text>
+  <text x="580" y="202" text-anchor="middle" class="cap">access + refresh JWT</text>
+  <line x1="670" y1="191" x2="742" y2="191" class="arr"/>
+  <rect x="745" y="164" width="110" height="54" rx="8" class="box"/>
+  <text x="800" y="182" text-anchor="middle" class="lbl">MongoDB</text>
+  <text x="800" y="198" text-anchor="middle" class="cap">store hash</text>
+
+  <!-- Row 3: Protected route -->
+  <text x="0" y="276" class="row-lbl">3. Call a protected route</text>
+  <rect x="0" y="290" width="180" height="54" rx="8" class="box"/>
+  <text x="90" y="312" text-anchor="middle" class="lbl">Client</text>
+  <text x="90" y="328" text-anchor="middle" class="cap">Authorization: Bearer …</text>
+  <line x1="180" y1="317" x2="252" y2="317" class="arr"/>
+  <rect x="255" y="290" width="150" height="54" rx="8" class="box"/>
+  <text x="330" y="312" text-anchor="middle" class="lbl">JwtAuthGuard</text>
+  <text x="330" y="328" text-anchor="middle" class="cap">@UseGuards</text>
+  <line x1="405" y1="317" x2="477" y2="317" class="arr"/>
+  <rect x="480" y="290" width="180" height="54" rx="8" class="box-accent"/>
+  <text x="570" y="312" text-anchor="middle" class="lbl">JwtStrategy.validate()</text>
+  <text x="570" y="328" text-anchor="middle" class="cap">verifies access token</text>
+  <line x1="660" y1="317" x2="732" y2="317" class="arr"/>
+  <rect x="735" y="290" width="120" height="54" rx="8" class="box"/>
+  <text x="795" y="312" text-anchor="middle" class="lbl">Handler</text>
+  <text x="795" y="328" text-anchor="middle" class="cap">req.user</text>
+
+  <!-- Row 4: Refresh -->
+  <text x="0" y="402" class="row-lbl">4. Refresh the access token</text>
+  <rect x="0" y="416" width="160" height="54" rx="8" class="box"/>
+  <text x="80" y="438" text-anchor="middle" class="lbl">Client</text>
+  <text x="80" y="454" text-anchor="middle" class="cap">POST /auth/refresh</text>
+  <line x1="160" y1="443" x2="232" y2="443" class="arr"/>
+  <rect x="235" y="416" width="180" height="54" rx="8" class="box"/>
+  <text x="325" y="438" text-anchor="middle" class="lbl">RefreshTokenGuard</text>
+  <text x="325" y="454" text-anchor="middle" class="cap">extracts token from body</text>
+  <line x1="415" y1="443" x2="487" y2="443" class="arr"/>
+  <rect x="490" y="416" width="180" height="54" rx="8" class="box-accent"/>
+  <text x="580" y="438" text-anchor="middle" class="lbl">AuthService.refresh()</text>
+  <text x="580" y="454" text-anchor="middle" class="cap">compare hash, rotate</text>
+  <line x1="670" y1="443" x2="742" y2="443" class="arr"/>
+  <rect x="745" y="416" width="110" height="54" rx="8" class="box"/>
+  <text x="800" y="434" text-anchor="middle" class="lbl">New pair</text>
+  <text x="800" y="450" text-anchor="middle" class="cap">access + refresh</text>
+
+  <!-- Footnote -->
+  <text x="0" y="520" class="cap">Access tokens expire in 15 minutes and are never stored server-side.</text>
+  <text x="0" y="538" class="cap">Refresh tokens expire in 7 days; only a bcrypt hash of the current one is kept in MongoDB.</text>
+  <text x="0" y="556" class="cap">Logging out clears that stored hash, so a leaked refresh token stops working immediately.</text>
+</svg>
+    </div>
+  </section>
+
+  <section id="structure">
+    <h2>Project structure</h2>
+    <div class="tree">src/
+├── <b>main.ts</b>
+├── <b>app.module.ts</b>
+├── user/
+│   ├── user.schema.ts
+│   ├── user.service.ts
+│   └── user.module.ts
+└── auth/
+    ├── auth.module.ts
+    ├── auth.controller.ts
+    ├── auth.service.ts
+    ├── dto/
+    │   ├── register.dto.ts
+    │   └── login.dto.ts
+    ├── strategies/
+    │   ├── jwt.strategy.ts
+    │   └── refresh-token.strategy.ts
+    └── guards/
+        ├── jwt-auth.guard.ts
+        └── refresh-token.guard.ts</div>
+  </section>
+
+  <section id="setup">
+    <h2>Setup, step by step</h2>
+    <ol class="steps">
+
+      <li>
+        <h3>Install dependencies</h3>
+        <p>Same core packages as the original article, plus <code>bcrypt</code> for hashing, <code>@nestjs/config</code> for secrets, and <code>class-validator</code> for input checking.</p>
+        <span class="filename">terminal</span>
+<pre><code class="language-bash">npm install @nestjs/jwt @nestjs/passport @nestjs/config @nestjs/mongoose \
+  passport passport-jwt mongoose bcrypt class-validator class-transformer
+
+npm install -D @types/passport-jwt @types/bcrypt</code></pre>
+      </li>
+
+      <li>
+        <h3>Add environment variables</h3>
+        <p>Two separate secrets — one per token type — so leaking one doesn't compromise the other.</p>
+        <span class="filename">.env</span>
+<pre><code class="language-bash">MONGODB_URI=mongodb://127.0.0.1:27017/nest-jwt-auth
+
+JWT_ACCESS_SECRET=replace-with-a-long-random-string
+JWT_ACCESS_EXPIRES=15m
+
+JWT_REFRESH_SECRET=replace-with-a-different-long-random-string
+JWT_REFRESH_EXPIRES=7d</code></pre>
+      </li>
+
+      <li>
+        <h3>Define the User schema</h3>
+        <p>Note there's no <code>password</code> field — only <code>passwordHash</code>, and a <code>refreshTokenHash</code> used to revoke sessions.</p>
+        <span class="filename">src/user/user.schema.ts</span>
+<pre><code class="language-typescript">import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+
+export type UserDocument = User & Document;
+
+@Schema({ timestamps: true })
+export class User {
+  @Prop({ required: true, unique: true })
+  username: string;
+
+  // A bcrypt hash, never the raw password
+  @Prop({ required: true })
+  passwordHash: string;
+
+  // Hash of the CURRENT refresh token. Storing a hash (not the token itself)
+  // means a database leak alone can't be replayed as a valid session.
+  @Prop({ default: null })
+  refreshTokenHash: string | null;
+}
+
+export const UserSchema = SchemaFactory.createForClass(User);</code></pre>
+      </li>
+
+      <li>
+        <h3>Add DTOs for validation</h3>
+        <p>The original article reads straight from <code>req.body</code> with no checks. These reject bad input before it reaches your service logic.</p>
+        <span class="filename">src/auth/dto/register.dto.ts</span>
+<pre><code class="language-typescript">import { IsString, MinLength, MaxLength } from 'class-validator';
+
+export class RegisterDto {
+  @IsString()
+  @MinLength(3)
+  @MaxLength(20)
+  username: string;
+
+  @IsString()
+  @MinLength(8) // the article accepted a 1-character password
+  password: string;
+}</code></pre>
+        <span class="filename">src/auth/dto/login.dto.ts</span>
+<pre><code class="language-typescript">import { IsString } from 'class-validator';
+
+export class LoginDto {
+  @IsString()
+  username: string;
+
+  @IsString()
+  password: string;
+}</code></pre>
+        <p>Enable the validator globally so DTO decorators actually run:</p>
+        <span class="filename">src/main.ts</span>
+<pre><code class="language-typescript">import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  await app.listen(3000);
+}
+bootstrap();</code></pre>
+      </li>
+
+      <li>
+        <h3>User service — hashing lives here, not in the controller</h3>
+        <span class="filename">src/user/user.service.ts</span>
+<pre><code class="language-typescript">import { Injectable, ConflictException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
+import { User, UserDocument } from './user.schema';
+
+@Injectable()
+export class UserService {
+  constructor(@InjectModel(User.name) private userModel: Model&lt;UserDocument&gt;) {}
+
+  async create(username: string, password: string): Promise&lt;UserDocument&gt; {
+    const existing = await this.userModel.findOne({ username });
+    if (existing) {
+      // Fail with a clear message instead of letting Mongo's unique index
+      // throw a raw duplicate-key error
+      throw new ConflictException('Username is already taken');
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = new this.userModel({ username, passwordHash });
+    return user.save();
+  }
+
+  findByUsername(username: string) {
+    return this.userModel.findOne({ username }).exec();
+  }
+
+  findById(id: string) {
+    return this.userModel.findById(id).exec();
+  }
+
+  setRefreshTokenHash(userId: string, refreshTokenHash: string | null) {
+    return this.userModel.findByIdAndUpdate(userId, { refreshTokenHash }).exec();
+  }
+}</code></pre>
+      </li>
+
+      <li>
+        <h3>JWT strategy — verifies access tokens</h3>
+        <p>Registered under the explicit name <code>'jwt'</code> so it can coexist with the refresh-token strategy below — the article's <code>AuthGuard()</code> with no name only works when there's a single strategy in the whole app.</p>
+        <span class="filename">src/auth/strategies/jwt.strategy.ts</span>
+<pre><code class="language-typescript">import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
+import { UserService } from '../../user/user.service';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
+  constructor(configService: ConfigService, private userService: UserService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: configService.get('JWT_ACCESS_SECRET'),
+    });
+  }
+
+  async validate(payload: { sub: string }) {
+    const user = await this.userService.findById(payload.sub);
+    if (!user) throw new UnauthorizedException();
+    // Whatever is returned here becomes `req.user` in the controller
+    return { id: user._id, username: user.username };
+  }
+}</code></pre>
+      </li>
+
+      <li>
+        <h3>Refresh-token strategy — verifies refresh tokens</h3>
+        <p>Reads the token from the request body rather than a header, since this is the one endpoint the access token isn't used for.</p>
+        <span class="filename">src/auth/strategies/refresh-token.strategy.ts</span>
+<pre><code class="language-typescript">import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+
+@Injectable()
+export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+  constructor(configService: ConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromBodyField('refreshToken'),
+      secretOrKey: configService.get('JWT_REFRESH_SECRET'),
+      passReqToCallback: true,
+    });
+  }
+
+  validate(req: Request, payload: { sub: string }) {
+    const refreshToken = req.body?.refreshToken;
+    if (!refreshToken) throw new UnauthorizedException();
+    // AuthService needs the raw token to compare against the stored hash
+    return { userId: payload.sub, refreshToken };
+  }
+}</code></pre>
+        <span class="filename">src/auth/guards/jwt-auth.guard.ts</span>
+<pre><code class="language-typescript">import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}</code></pre>
+        <span class="filename">src/auth/guards/refresh-token.guard.ts</span>
+<pre><code class="language-typescript">import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+export class RefreshTokenGuard extends AuthGuard('jwt-refresh') {}</code></pre>
+      </li>
+
+      <li>
+        <h3>Auth service — the actual logic</h3>
+        <p>This is where the article's example broke down: <code>register()</code> was called from the controller but never implemented, and passwords were compared with <code>===</code>. Both are fixed here, plus the refresh/logout flow.</p>
+        <span class="filename">src/auth/auth.service.ts</span>
+<pre><code class="language-typescript">import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { UserService } from '../user/user.service';
+import { UserDocument } from '../user/user.schema';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+    private configService: ConfigService,
+  ) {}
+
+  async register(username: string, password: string) {
+    const user = await this.userService.create(username, password);
+    return { id: user._id, username: user.username };
+  }
+
+  // Called by the login endpoint before any token is issued
+  async validateUser(username: string, password: string): Promise&lt;UserDocument&gt; {
+    const user = await this.userService.findByUsername(username);
+    // Compare against the bcrypt hash — the article compared plain text directly
+    const isMatch = user &amp;&amp; (await bcrypt.compare(password, user.passwordHash));
+    if (!user || !isMatch) {
+      throw new UnauthorizedException('Invalid username or password');
+    }
+    return user;
+  }
+
+  async login(user: UserDocument) {
+    const tokens = await this.issueTokens(user._id.toString());
+    // Store a hash of the refresh token, never the token itself
+    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, 10);
+    await this.userService.setRefreshTokenHash(user._id.toString(), refreshTokenHash);
+    return tokens;
+  }
+
+  async refresh(userId: string, refreshToken: string) {
+    const user = await this.userService.findById(userId);
+    if (!user || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Session expired, please log in again');
+    }
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    if (!isMatch) {
+      throw new UnauthorizedException('Session expired, please log in again');
+    }
+    // Rotate: issue a brand-new pair and invalidate the old refresh token
+    const tokens = await this.issueTokens(userId);
+    const newHash = await bcrypt.hash(tokens.refreshToken, 10);
+    await this.userService.setRefreshTokenHash(userId, newHash);
+    return tokens;
+  }
+
+  async logout(userId: string) {
+    await this.userService.setRefreshTokenHash(userId, null);
+  }
+
+  private async issueTokens(userId: string) {
+    const payload = { sub: userId };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get('JWT_ACCESS_SECRET'),
+        expiresIn: this.configService.get('JWT_ACCESS_EXPIRES'),
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get('JWT_REFRESH_EXPIRES'),
+      }),
+    ]);
+    return { accessToken, refreshToken };
+  }
+}</code></pre>
+      </li>
+
+      <li>
+        <h3>Auth controller — five endpoints, all of them working</h3>
+        <span class="filename">src/auth/auth.controller.ts</span>
+<pre><code class="language-typescript">import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RefreshTokenGuard } from './guards/refresh-token.guard';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private authService: AuthService) {}
+
+  @Post('register')
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto.username, dto.password);
+  }
+
+  @Post('login')
+  async login(@Body() dto: LoginDto) {
+    const user = await this.authService.validateUser(dto.username, dto.password);
+    return this.authService.login(user);
+  }
+
+  @UseGuards(RefreshTokenGuard)
+  @Post('refresh')
+  refresh(@Req() req) {
+    // req.user comes from RefreshTokenStrategy.validate() above
+    return this.authService.refresh(req.user.userId, req.user.refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  logout(@Req() req) {
+    return this.authService.logout(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('profile')
+  profile(@Req() req) {
+    // Only reachable with a valid, unexpired access token
+    return req.user;
+  }
+}</code></pre>
+      </li>
+
+      <li>
+        <h3>Wire up the modules</h3>
+        <span class="filename">src/auth/auth.module.ts</span>
+<pre><code class="language-typescript">import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { RefreshTokenStrategy } from './strategies/refresh-token.strategy';
+import { UserModule } from '../user/user.module';
+
+@Module({
+  // Secrets are read per-token inside AuthService via ConfigService,
+  // so JwtModule itself doesn't need a global secret/expiry here
+  imports: [PassportModule, JwtModule.register({}), UserModule],
+  controllers: [AuthController],
+  providers: [AuthService, JwtStrategy, RefreshTokenStrategy],
+})
+export class AuthModule {}</code></pre>
+        <span class="filename">src/app.module.ts</span>
+<pre><code class="language-typescript">import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // loads .env once, available everywhere
+    MongooseModule.forRoot(process.env.MONGODB_URI),
+    AuthModule,
+    UserModule,
+  ],
+})
+export class AppModule {}</code></pre>
+      </li>
+    </ol>
+  </section>
+
+  <section id="testing">
+    <h2>Testing the endpoints</h2>
+    <span class="filename">terminal</span>
+<pre><code class="language-bash"># 1. Register
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "amir", "password": "correct-horse-battery"}'
+
+# 2. Login — returns { accessToken, refreshToken }
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "amir", "password": "correct-horse-battery"}'
+
+# 3. Call a protected route with the access token
+curl -X POST http://localhost:3000/auth/profile \
+  -H "Authorization: Bearer &lt;accessToken&gt;"
+
+# 4. Once the access token expires, get a new pair
+curl -X POST http://localhost:3000/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "&lt;refreshToken&gt;"}'
+
+# 5. Log out — revokes the stored refresh token
+curl -X POST http://localhost:3000/auth/logout \
+  -H "Authorization: Bearer &lt;accessToken&gt;"</code></pre>
+  </section>
+
+  <section id="comparison">
+    <h2>vs. the original article</h2>
+    <table>
+      <tr><th>Concern</th><th>Original article</th><th>This example</th></tr>
+      <tr>
+        <td>Passwords</td>
+        <td class="bad">Stored and compared as plain text</td>
+        <td class="good">Hashed with bcrypt, compared with bcrypt.compare()</td>
+      </tr>
+      <tr>
+        <td>Secrets</td>
+        <td class="bad">Hardcoded <code>'yourSecretKey'</code> string</td>
+        <td class="good">Loaded from <code>.env</code> via ConfigService</td>
+      </tr>
+      <tr>
+        <td>Register endpoint</td>
+        <td class="bad">Calls <code>authService.register()</code>, which isn't defined — crashes</td>
+        <td class="good">Implemented and working</td>
+      </tr>
+      <tr>
+        <td>Input handling</td>
+        <td class="bad">Reads raw <code>req.body</code>, no validation</td>
+        <td class="good">DTOs + class-validator reject bad input</td>
+      </tr>
+      <tr>
+        <td>Guard usage</td>
+        <td class="bad"><code>AuthGuard()</code> with no strategy name</td>
+        <td class="good">Named strategies ('jwt', 'jwt-refresh') coexist safely</td>
+      </tr>
+      <tr>
+        <td>Tokens</td>
+        <td class="bad">Single long-lived access token only</td>
+        <td class="good">Short-lived access token + rotating refresh token</td>
+      </tr>
+      <tr>
+        <td>Logout</td>
+        <td class="bad">Not implemented — tokens are valid until they expire</td>
+        <td class="good">Revokes the stored refresh-token hash immediately</td>
+      </tr>
+    </table>
+  </section>
+
+</main>
+
+<script>hljs.highlightAll();</script>
+</body>
+</html>
