@@ -11,7 +11,7 @@ export class UsersController {
     @Post()
     async create(@Body() userData: RegisterDto) {
         const {username, email, password} = userData;
-        return this.userService.create({username, email, password})
+        return this.userService.create(username, email, password)
 
 
     }
