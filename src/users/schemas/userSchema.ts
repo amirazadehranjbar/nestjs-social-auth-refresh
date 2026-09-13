@@ -19,7 +19,7 @@ export class User {
 
   // Hash of the CURRENT refresh token. Storing a hash (not the token itself)
   // means a database leak alone can't be replayed as a valid session.
-  @Prop({ default: null })
+  @Prop({ default: null ,type: String})
   refreshTokenHash: string | null;
 }
 
